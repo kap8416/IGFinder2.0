@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-IGFinder_final_debug.py
-
-Safe version that analyzes only chromosomes 1 to 22 to avoid Ensembl API errors.
+IGFinder.py
 """
 
 import os
@@ -18,7 +16,7 @@ from scipy.stats import ttest_ind, chi2_contingency
 import fetch_genes
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='IGFinder debug: intronless genes with visible messages.')
+    parser = argparse.ArgumentParser(description='IGFinder debug: genes intronless con mensajes visibles.')
     parser.add_argument('--species', required=True)
     parser.add_argument('--utr_db', required=True)
     parser.add_argument('--output', default='genes_filtrados.tsv')
@@ -41,7 +39,7 @@ def is_intronless(transcript):
     return len(transcript.get('Exon', [])) == 1
 
 def fetch_all_genes(species):
-    logging.info(f'🧬 🧬 Retrieving genes for {species} desde Ensembl...')
+    logging.info(f'🧬 Recuperando genes para {species} desde Ensembl...')
     chrom_data, _ = fetch_genes.chromosomes_info(species=species)
 
     # Mantener solo cromosomas 1 al 22
@@ -50,7 +48,7 @@ def fetch_all_genes(species):
 
     all_genes = []
     for chrom in chrom_data:
-        logging.info(f"→ → Processing chromosome {chrom}...")
+        logging.info(f"→ Procesando cromosoma {chrom}...")
         genes = fetch_genes.genes_in_chrom(species, chrom, chrom_data[chrom]['length'])
         logging.info(f"  - {chrom}: {len(genes)} genes")
         all_genes += genes
@@ -96,23 +94,23 @@ def generate_visualizations(df, output_prefix="IGFinder_plots"):
 
     plt.figure(figsize=(8,5))
     sns.boxplot(x="type", y="length", data=df)
-    plt.title("Gene size by type")
+    plt.title("Tamaño de genes por tipo")
     plt.savefig(f"{output_prefix}_boxplot.png"); plt.close()
 
     plt.figure(figsize=(8,5))
     sns.violinplot(x="type", y="length", data=df)
-    plt.title("Gene length distribution")
+    plt.title("Distribución de longitud génica")
     plt.savefig(f"{output_prefix}_violin.png"); plt.close()
 
     plt.figure(figsize=(8,5))
     sns.kdeplot(data=df[df['type'] == 'intronless']['length'], label="Intronless", fill=True)
     sns.kdeplot(data=df[df['type'] == 'multi-exonic']['length'], label="Multi-exonic", fill=True)
-    plt.title("Gene size density curves")
+    plt.title("Curvas de densidad del tamaño génico")
     plt.legend(); plt.savefig(f"{output_prefix}_density.png"); plt.close()
 
     plt.figure(figsize=(10,5))
     sns.countplot(data=df, x='chr', hue='type')
-    plt.title("Gene distribution per chromosome")
+    plt.title("Distribución de genes por cromosoma")
     plt.xticks(rotation=90)
     plt.savefig(f"{output_prefix}_chromosomal_distribution.png"); plt.close()
 
@@ -154,3 +152,161 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import ttest_ind, chi2_contingency
+
+def save_results(df, output_file):
+    df.to_csv(output_file, sep='\t', index=False)
+    logging.info(f"[✔] Archivo guardado: {output_file}")
+
+def generate_statistics(df, stats_file="IGFinder_stats.txt"):
+    logging.info("[📉] Realizando pruebas estadísticas...")
+
+    df_intronless = df[df["gene_type"] == "intronless"]
+    df_multi = df[df["gene_type"] == "multi_exonic"]
+
+    stats_text = ""
+
+    # t-test for gene length
+    t_stat, p_val = ttest_ind(df_intronless["length"], df_multi["length"], equal_var=False)
+    stats_text += f"T-test (gene length):\nStatistic = {t_stat:.4f}, P-value = {p_val:.4e}\n"
+
+    # chi-squared test for chromosomal distribution
+    contingency = pd.crosstab(df["chromosome"], df["gene_type"])
+    chi2, chi2_p, _, _ = chi2_contingency(contingency)
+    stats_text += f"Chi-squared (chromosome distribution):\nStatistic = {chi2:.4f}, P-value = {chi2_p:.4e}\n"
+
+    with open(stats_file, "w") as f:
+        f.write(stats_text)
+
+    logging.info(f"[✔] Estadísticas guardadas en {stats_file}")
+
+def plot_gene_distributions(df, prefix="IGFinder_plots"):
+    logging.info("[📊] Generando visualizaciones...")
+
+    sns.set(style="whitegrid")
+
+    # Boxplot
+    plt.figure(figsize=(6, 4))
+    sns.boxplot(x="gene_type", y="length", data=df)
+    plt.title("Gene Length Distribution (Boxplot)")
+    plt.savefig(f"{prefix}_boxplot.png")
+    plt.close()
+
+    # Violinplot
+    plt.figure(figsize=(6, 4))
+    sns.violinplot(x="gene_type", y="length", data=df)
+    plt.title("Gene Length Distribution (Violin)")
+    plt.savefig(f"{prefix}_violinplot.png")
+    plt.close()
+
+    # Density
+    plt.figure(figsize=(6, 4))
+    for label, group in df.groupby("gene_type"):
+        sns.kdeplot(group["length"], label=label)
+    plt.title("Gene Length Density")
+    plt.legend()
+    plt.savefig(f"{prefix}_density.png")
+    plt.close()
+
+    # Barplot by chromosome
+    plt.figure(figsize=(10, 5))
+    chrom_counts = df.groupby(["chromosome", "gene_type"]).size().unstack(fill_value=0)
+    chrom_counts.plot(kind="bar", stacked=True)
+    plt.title("Genes per Chromosome")
+    plt.xlabel("Chromosome")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_barplot.png")
+    plt.close()
+
+    logging.info(f"[✔] Gráficas guardadas como {prefix}_*.png")
+
+# Modificar main para guardar resultados y ejecutar análisis si se solicitan
+def main():
+    args = parse_arguments()
+    setup_logging(args.log)
+
+    all_genes = fetch_all_genes(args.species)
+
+    filtered_df = classify_genes(all_genes, args.utr_db)
+    logging.info(f"[✔] Total de genes recuperados: {len(filtered_df)}")
+
+    if args.output:
+        save_results(filtered_df, args.output)
+
+    if args.stats:
+        generate_statistics(filtered_df)
+
+    if args.plots:
+        plot_gene_distributions(filtered_df)
+
+    logging.info("[🏁] Ejecución finalizada correctamente.")
+
+if __name__ == "__main__":
+    main()
+
+
+def plot_advanced_gene_distributions(df, prefix="IGFinder_pub"):
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import matplotlib.ticker as ticker
+
+    sns.set(style="whitegrid", context="talk", font_scale=1.4)
+
+    # Boxplot
+    plt.figure(figsize=(8, 6))
+    ax = sns.boxplot(x="gene_type", y="length", data=df, notch=True, linewidth=2.5, palette="Set2")
+    ax.set_title("Gene Length Distribution", fontsize=18, weight='bold')
+    ax.set_xlabel("Gene Type", fontsize=16)
+    ax.set_ylabel("Gene Length (bp)", fontsize=16)
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{int(x/1000)}k"))
+    sns.despine()
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_boxplot_highres.png", dpi=300)
+    plt.close()
+
+    # Violinplot
+    plt.figure(figsize=(8, 6))
+    ax = sns.violinplot(x="gene_type", y="length", data=df, inner="quartile", linewidth=1.5, palette="Pastel1")
+    ax.set_title("Gene Length Violin Plot", fontsize=18, weight='bold')
+    ax.set_xlabel("Gene Type", fontsize=16)
+    ax.set_ylabel("Gene Length (bp)", fontsize=16)
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f"{int(x/1000)}k"))
+    sns.despine()
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_violin_highres.png", dpi=300)
+    plt.close()
+
+    # Density
+    plt.figure(figsize=(8, 6))
+    for label, group in df.groupby("gene_type"):
+        sns.kdeplot(group["length"], fill=True, label=label, alpha=0.5, linewidth=2)
+    plt.title("Gene Length Density Curve", fontsize=18, weight='bold')
+    plt.xlabel("Gene Length (bp)", fontsize=16)
+    plt.ylabel("Density", fontsize=16)
+    plt.legend(title="Gene Type")
+    sns.despine()
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_density_highres.png", dpi=300)
+    plt.close()
+
+    # Barplot by chromosome
+    plt.figure(figsize=(12, 6))
+    chrom_counts = df.groupby(["chromosome", "gene_type"]).size().unstack(fill_value=0)
+    chrom_counts = chrom_counts.loc[sorted(chrom_counts.index, key=lambda x: int(x) if x.isdigit() else x)]
+    chrom_counts.plot(kind="bar", stacked=True, colormap="tab20", edgecolor='black')
+    plt.title("Gene Distribution per Chromosome", fontsize=18, weight='bold')
+    plt.xlabel("Chromosome", fontsize=16)
+    plt.ylabel("Gene Count", fontsize=16)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(f"{prefix}_chromosome_barplot_highres.png", dpi=300)
+    plt.close()
+
+    logging.info("[✔] Visualizaciones de publicación generadas.")
