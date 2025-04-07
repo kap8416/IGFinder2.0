@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-IGFinder.py
+IGFinder_final_debug.py
+
+Versión segura que analiza solo cromosomas 1 al 22 para evitar errores del API de Ensembl.
 """
 
 import os
