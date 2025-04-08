@@ -81,6 +81,16 @@ python3 IGFinder.py \
 
 ---
 
+| Feature                        | IGFinder1 ❌        | IGFinder2.0 ✅               |
+|-------------------------------|---------------------|-----------------------------   |
+| Modular design                | ❌ Monolithic script | ✅ `fetch`, `main`, `utils`  |
+| Logging                       | ❌ Print only        | ✅ Logging with timestamps   |
+| Visual outputs                | ❌ None              | ✅ PNG plots, statistics     |
+| Reproducibility               | ⚠️ Manual            | ✅ Fully parameterized CLI   |
+| Command-line support          | ❌ No                | ✅ With `argparse`           |
+| Scalability                   | ❌ Limited           | ✅ Multi-species ready       |
+
+
 ## 🚧 Upcoming Features
 
 ### 7. 🧬 Gene Chromosome clustering-Enrichment Analysis (Sliding Window)
