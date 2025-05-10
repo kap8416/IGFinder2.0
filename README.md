@@ -121,9 +121,9 @@ python3 IGFinder.py \
 Developed and maintained by **Katia Aviña Padilla**  
 Test: Lesly Cárdenas López
 
-📧 katia.avinap@cinvestav.mx  
+📧 katia.avinap@cinvestav.mx  🔗 [ResearchGate](https://www.researchgate.net/profile/Katia-Avina-Padilla)
 📧 lesly.cardenas.fcqb2022@uas.edu.mx
-🔗 [ResearchGate](https://www.researchgate.net/profile/Katia-Avina-Padilla)
+
 
 Feel free to contribute, request features, or collaborate.
 
